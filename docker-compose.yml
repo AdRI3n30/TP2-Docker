@@ -57,10 +57,11 @@ services:
       db_mongo:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/posts && curl -f http://localhost:8000/users || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3    
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/posts'); urllib.request.urlopen('http://localhost:8000/users')"]
+      interval: 15s     
+      timeout: 10s       
+      retries: 5         
+      start_period: 45s  
 
 
   admin_mysql:
@@ -72,7 +73,7 @@ services:
       db_mysql:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080"]
       interval: 30s
       timeout: 10s
       retries: 3    
@@ -84,15 +85,15 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_INITDB_ROOT_USERNAME}
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - ME_CONFIG_MONGODB_ADMINUSERNAME
+      - ME_CONFIG_MONGODB_ADMINPASSWORD
       - ME_CONFIG_MONGODB_SERVER=db_mongo
-      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_PORT
     depends_on:
       db_mongo:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081"]
       interval: 30s
       timeout: 10s
       retries: 3    
