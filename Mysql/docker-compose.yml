@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:9.2
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD
+    volumes:
+      - ./sqlfiles:/docker-entrypoint-initdb.d
+    healthcheck:
+        test: "mysql --user=$$MYSQL_USER --password=$$MYSQL_ROOT_PASSWORD --execute \"SHOW DATABASES;\" || exit 1"
+
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8080", "|", "grep", "Adminer"]    
+
+
+  python-server:
+    build:
+      context: ./Server
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./Server:/server
+    environment:
+      - MYSQL_HOST=db
+      - MYSQL_USER
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8000/users", "|", "grep", "utilisateurs"]  
