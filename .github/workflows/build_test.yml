@@ -31,18 +31,18 @@ jobs:
          command: cves
          image: my-app-python:1.0.0
          file: ./api/Dockerfile
-         only-severities: criticals,high
+         only-severities: criticals
          ignore-base: true
-         exit-code: false
+         exit-code: true
      - name: Docker Scout Scan Mongo
        uses: docker/scout-action@v1
        with:
          command: cves
          image: my-app-mongo:1.0.0
          file: ./MongoDB/Dockerfile
-         only-severities: criticals,high
+         only-severities: criticals
          ignore-base: true
-         exit-code: false
+         exit-code: true
      - name: Trivy Scan MySQL image
        uses: aquasecurity/trivy-action@master
        with:
