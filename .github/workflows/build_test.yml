@@ -81,7 +81,7 @@ jobs:
             
             # 3. On vérifie aussi qu'on a bien reçu des données (évite les faux positifs)
             if [ -n "$HEALTH_STATES" ] && [ "$NOT_HEALTHY_COUNT" -eq 0 ]; then
-              echo "✅ Tous les services sont healthy !"
+              echo "Tous les services sont healthy !"
               docker compose ps
               exit 0
             fi
