@@ -1,4 +1,3 @@
-FROM mongo:8.2
-USER mongodb
+FROM cgr.dev/chainguard/mongodb:8.0
 COPY ./dbfiles /docker-entrypoint-initdb.d
 EXPOSE 27017
