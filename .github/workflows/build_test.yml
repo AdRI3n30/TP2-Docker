@@ -61,6 +61,24 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Wait for Services (Healthcheck)
+        run: |
+          MAX_RETRIES=12
+          DELAY=5
+          COUNT=0
+          while [ $COUNT -lt $MAX_RETRIES ]; do
+            # Vérifie si tous les services sont 'healthy' 
+            STATUS=$(docker compose ps --format json | jq -r 'if type == "array" then .[] else . end | .Health' | grep -v "healthy" | wc -l)
+            if [ "$STATUS" -eq 0 ]; then
+              echo "Tous les services sont prêts !"
+              exit 0
+            fi
+            echo "Tentative $((COUNT+1)): Services non prêts... attente."
+            sleep $DELAY
+            COUNT=$((COUNT+1))
+          done
+          echo "Erreur: Timeout atteint."
+          exit 1   
       - name: Checkout code
         run: docker compose up -d   
         env:
