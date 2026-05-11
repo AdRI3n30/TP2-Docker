@@ -62,23 +62,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Wait for Services (Healthcheck)
+        shell: bash
         run: |
           MAX_RETRIES=12
           DELAY=5
           COUNT=0
+          
+          echo "Démarrage de la vérification de santé..."
+
           while [ $COUNT -lt $MAX_RETRIES ]; do
-            # Vérifie si tous les services sont 'healthy' 
-            STATUS=$(docker compose ps --format json | jq -r 'if type == "array" then .[] else . end | .Health' | grep -v "healthy" | wc -l)
-            if [ "$STATUS" -eq 0 ]; then
-              echo "Tous les services sont prêts !"
+            # 1. On récupère tous les états de santé
+            # On utilise -s pour 'slurp' au cas où Docker renvoie plusieurs objets JSON séparés
+            HEALTH_STATES=$(docker compose ps --format json | jq -s -r '.[] | .Health')
+            
+            # 2. On compte combien ne sont PAS "healthy"
+            # On vérifie si "healthy" est absent ou si c'est vide/starting
+            NOT_HEALTHY_COUNT=$(echo "$HEALTH_STATES" | grep -v "healthy" | wc -l)
+            
+            # 3. On vérifie aussi qu'on a bien reçu des données (évite les faux positifs)
+            if [ -n "$HEALTH_STATES" ] && [ "$NOT_HEALTHY_COUNT" -eq 0 ]; then
+              echo "✅ Tous les services sont healthy !"
+              docker compose ps
               exit 0
             fi
-            echo "Tentative $((COUNT+1)): Services non prêts... attente."
+            
+            echo "Attempt $((COUNT+1))/$MAX_RETRIES: Services en cours de démarrage..."
             sleep $DELAY
             COUNT=$((COUNT+1))
           done
-          echo "Erreur: Timeout atteint."
-          exit 1   
+          
+          echo "❌ ERREUR : Les services n'ont pas démarré à temps."
+          docker compose ps
+          exit 1
       - name: Checkout code
         run: docker compose up -d   
         env:
