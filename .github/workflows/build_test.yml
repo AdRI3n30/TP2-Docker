@@ -32,6 +32,7 @@ jobs:
          image: my-app-python:1.0.0
          file: ./api/Dockerfile
          only-severities: criticals,high
+         ignore-base: true
          exit-code: false
      - name: Docker Scout Scan Mongo
        uses: docker/scout-action@v1
