@@ -1,4 +1,5 @@
 FROM python:3.11-slim
-RUN pip install --no-cache-dir fastapi uvicorn motor mysql-connector-python
+RUN pip install --no-cache-dir --upgrade "wheel>=0.46.2" && \
+    pip install --no-cache-dir fastapi uvicorn motor mysql-connector-python
 COPY . .
 EXPOSE 8000
