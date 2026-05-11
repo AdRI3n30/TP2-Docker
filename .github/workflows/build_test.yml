@@ -102,14 +102,14 @@ jobs:
             COUNT=$((COUNT+1))
           done
           
-          echo "⚠️ Timeout atteint. Vérification de l'état final..."
+          echo " Timeout atteint. Vérification de l'état final..."
           docker compose ps
           UNHEALTHY=$(docker compose ps --format json | jq -s -r '.[] | .Health' | grep -c "^unhealthy$" || true)
           if [ "$UNHEALTHY" -gt 0 ]; then
-            echo "❌ ERREUR : $UNHEALTHY service(s) en état 'unhealthy'."
+            echo "ERREUR : $UNHEALTHY service(s) en état 'unhealthy'."
             exit 1
           fi
-          echo "⚠️ Certains services sont encore en démarrage mais aucun n'est 'unhealthy'. Continuation..."
+          echo " Certains services sont encore en démarrage mais aucun n'est 'unhealthy'. Continuation..."
 
       - name: Test /posts route
         run: |
