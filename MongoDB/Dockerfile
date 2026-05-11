@@ -1,4 +1,4 @@
-FROM mongo:8.0
-RUN apt-get update && apt-get upgrade -y && apt-get clean && rm -rf /var/lib/apt/lists/*
+FROM mongo:8.2.7
+USER mongodb
 COPY ./dbfiles /docker-entrypoint-initdb.d
 EXPOSE 27017
