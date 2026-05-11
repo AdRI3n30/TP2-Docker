@@ -61,6 +61,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Checkout code
+        run: docker compose up -d   
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+          MONGO_INITDB_ROOT_USERNAME: ${{ secrets.MONGO_INITDB_ROOT_USERNAME }}
+          MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.MONGO_INITDB_ROOT_PASSWORD }}
+          MONGO_INITDB_DATABASE: ${{ secrets.MONGO_INITDB_DATABASE }}
+          MONGO_HOST: ${{ secrets.MONGO_HOST }}
+          ME_CONFIG_MONGODB_ADMINUSERNAME: ${{ secrets.ME_CONFIG_MONGODB_ADMINUSERNAME }}
+          ME_CONFIG_MONGODB_ADMINPASSWORD: ${{ secrets.ME_CONFIG_MONGODB_ADMINPASSWORD }}
+          ME_CONFIG_MONGODB_URL: ${{ secrets.ME_CONFIG_MONGODB_URL }}
       - name: Wait for Services (Healthcheck)
         shell: bash
         run: |
@@ -93,22 +108,7 @@ jobs:
           
           echo "❌ ERREUR : Les services n'ont pas démarré à temps."
           docker compose ps
-          exit 1
-      - name: Checkout code
-        run: docker compose up -d   
-        env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-          MYSQL_USER: ${{ secrets.MYSQL_USER }}
-          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
-          MONGO_INITDB_ROOT_USERNAME: ${{ secrets.MONGO_INITDB_ROOT_USERNAME }}
-          MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.MONGO_INITDB_ROOT_PASSWORD }}
-          MONGO_INITDB_DATABASE: ${{ secrets.MONGO_INITDB_DATABASE }}
-          MONGO_HOST: ${{ secrets.MONGO_HOST }}
-          ME_CONFIG_MONGODB_ADMINUSERNAME: ${{ secrets.ME_CONFIG_MONGODB_ADMINUSERNAME }}
-          ME_CONFIG_MONGODB_ADMINPASSWORD: ${{ secrets.ME_CONFIG_MONGODB_ADMINPASSWORD }}
-          ME_CONFIG_MONGODB_URL: ${{ secrets.ME_CONFIG_MONGODB_URL }}
+          exit 1    
          
          
            
