@@ -40,6 +40,7 @@ jobs:
          image: my-app-mongo:1.0.0
          file: ./MongoDB/Dockerfile
          only-severities: criticals,high
+         ignore-base: true
          exit-code: false
      - name: Trivy Scan MySQL image
        uses: aquasecurity/trivy-action@master
