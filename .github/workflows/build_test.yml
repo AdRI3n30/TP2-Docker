@@ -40,7 +40,21 @@ jobs:
          image: my-app-mongo:1.0.0
          file: ./MongoDB/Dockerfile
          only-severities: criticals,high
-         exit-code: false   
+         exit-code: false
+
+  trivy-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Trivy Scan MySQL image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: mysql:8.0
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: 0
+
   docker-compose:
     needs: build-test
     runs-on: ubuntu-latest
