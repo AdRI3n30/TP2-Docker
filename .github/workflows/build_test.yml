@@ -28,7 +28,7 @@ jobs:
      - name: Docker Scout Scan Python
        uses: docker/scout-action@v1
        with:
-         command: cves,recommendations
+         command: recommendations
          image: my-app-python:1.0.0
          file: ./api/Dockerfile
          only-severities: criticals,high
