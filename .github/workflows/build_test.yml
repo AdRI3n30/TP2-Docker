@@ -1,11 +1,11 @@
 name: Build and Test Application
 
-on: 
+on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-    
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
@@ -16,7 +16,7 @@ jobs:
        uses: docker/setup-buildx-action@v3
      - name: Build image for scanning Python
        run: docker build -t my-app-python:1.0.0 -f ./api/Dockerfile .
-     - name: Build image for scanning Mongo 
+     - name: Build image for scanning Mongo
        run: |
          cd MongoDB
          docker build -t my-app-mongo:1.0.0 -f ./Dockerfile .
@@ -55,65 +55,93 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: 0
 
-  docker-compose:
+  integration-test:
     needs: build-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Checkout code
-        run: docker compose up -d   
-        env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-          MYSQL_USER: ${{ secrets.MYSQL_USER }}
-          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
-          MONGO_INITDB_ROOT_USERNAME: ${{ secrets.MONGO_INITDB_ROOT_USERNAME }}
-          MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.MONGO_INITDB_ROOT_PASSWORD }}
-          MONGO_INITDB_DATABASE: ${{ secrets.MONGO_INITDB_DATABASE }}
-          MONGO_HOST: ${{ secrets.MONGO_HOST }}
-          ME_CONFIG_MONGODB_ADMINUSERNAME: ${{ secrets.ME_CONFIG_MONGODB_ADMINUSERNAME }}
-          ME_CONFIG_MONGODB_ADMINPASSWORD: ${{ secrets.ME_CONFIG_MONGODB_ADMINPASSWORD }}
-          ME_CONFIG_MONGODB_URL: ${{ secrets.ME_CONFIG_MONGODB_URL }}
-      - name: Wait for Services (Healthcheck)
-        shell: bash
-        run: |
-          MAX_RETRIES=12
-          DELAY=5
-          COUNT=0
-          
-          echo "Démarrage de la vérification de santé..."
 
-          while [ $COUNT -lt $MAX_RETRIES ]; do
-            # 1. On récupère tous les états de santé
-            # On utilise -s pour 'slurp' au cas où Docker renvoie plusieurs objets JSON séparés
-            HEALTH_STATES=$(docker compose ps --format json | jq -s -r '.[] | .Health')
-            
-            # 2. On compte combien ne sont PAS "healthy"
-            # On vérifie si "healthy" est absent ou si c'est vide/starting
-            NOT_HEALTHY_COUNT=$(echo "$HEALTH_STATES" | grep -v "healthy" | wc -l)
-            
-            # 3. On vérifie aussi qu'on a bien reçu des données (évite les faux positifs)
-            if [ -n "$HEALTH_STATES" ] && [ "$NOT_HEALTHY_COUNT" -eq 0 ]; then
-              echo "Tous les services sont healthy !"
+      - name: Generate .env file
+        run: |
+          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
+          echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" >> .env
+          echo "MYSQL_USER=${{ secrets.MYSQL_USER }}" >> .env
+          echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> .env
+          echo "MONGO_INITDB_ROOT_USERNAME=${{ secrets.MONGO_INITDB_ROOT_USERNAME }}" >> .env
+          echo "MONGO_INITDB_ROOT_PASSWORD=${{ secrets.MONGO_INITDB_ROOT_PASSWORD }}" >> .env
+          echo "MONGO_INITDB_DATABASE=${{ secrets.MONGO_INITDB_DATABASE }}" >> .env
+          echo "ME_CONFIG_MONGODB_ADMINUSERNAME=${{ secrets.ME_CONFIG_MONGODB_ADMINUSERNAME }}" >> .env
+          echo "ME_CONFIG_MONGODB_ADMINPASSWORD=${{ secrets.ME_CONFIG_MONGODB_ADMINPASSWORD }}" >> .env
+          echo "ME_CONFIG_MONGODB_URL=${{ secrets.ME_CONFIG_MONGODB_URL }}" >> .env
+
+      - name: Deploy stack
+        run: docker compose up -d --build
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for all services to be healthy..."
+          MAX_WAIT=300
+          WAIT=0
+          SLEEP=10
+
+          until [ $WAIT -ge $MAX_WAIT ]; do
+            PENDING=$(docker compose ps | grep -cE "(starting|unhealthy)" || true)
+            if [ "$PENDING" -eq "0" ]; then
+              echo "All services ready after ${WAIT}s"
               docker compose ps
               exit 0
             fi
-            
-            echo "Attempt $((COUNT+1))/$MAX_RETRIES: Services en cours de démarrage..."
-            sleep $DELAY
-            COUNT=$((COUNT+1))
+            echo "Services still pending: $PENDING (${WAIT}s / ${MAX_WAIT}s)"
+            sleep $SLEEP
+            WAIT=$((WAIT + SLEEP))
           done
-          
-          echo "❌ ERREUR : Les services n'ont pas démarré à temps."
-          docker compose ps
-          exit 1    
-         
-         
-           
-    
-    
-    
 
-    
+          echo "ERROR: Timeout after ${MAX_WAIT}s - services not healthy"
+          docker compose ps
+          docker compose logs
+          exit 1
+
+      - name: Test /posts route
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/posts)
+          echo "GET /posts -> HTTP $HTTP_CODE"
+          [ "$HTTP_CODE" -eq 200 ] || { echo "FAILED: expected 200, got $HTTP_CODE"; exit 1; }
+
+      - name: Test /users route
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/users)
+          echo "GET /users -> HTTP $HTTP_CODE"
+          [ "$HTTP_CODE" -eq 200 ] || { echo "FAILED: expected 200, got $HTTP_CODE"; exit 1; }
+
+  publish:
+    needs: integration-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./api/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-app-python:latest
+
+      - name: Build and push MongoDB image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./MongoDB
+          file: ./MongoDB/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-app-mongo:latest
