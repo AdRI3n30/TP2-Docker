@@ -43,13 +43,13 @@ jobs:
          only-severities: criticals
          ignore-base: true
          exit-code: true
-     - name: Trivy Scan MySQL image
+     - name: Trivy Scan Bloquant sur CVE Critique
        uses: aquasecurity/trivy-action@master
        with:
-          image-ref: mysql:8.0
+          image-ref: node:14
           format: table
-          severity: HIGH,CRITICAL
-          exit-code: 0    
+          severity: CRITICAL
+          exit-code: 1   
 
 
   docker-compose:
