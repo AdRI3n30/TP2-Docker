@@ -155,5 +155,5 @@ jobs:
           context: ./MongoDB
           file: ./MongoDB/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-app-mongo:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-app-mongo:latest 
 
